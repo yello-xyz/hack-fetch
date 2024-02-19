@@ -1,0 +1,16 @@
+{
+  "name": "yello/hack-fetch",
+  "description": "Simple cURL wrapper for Hacklang",
+  "keywords": ["curl", "http", "hhvm", "hack"],
+  "homepage": "https://github.com/yello-xyz/hack-fetch",
+  "license": "MIT",
+  "require": {
+      "hhvm": "^4.0",
+      "hhvm/hsl": "^4.0"
+  },
+  "require-dev": {
+      "hhvm/hhast": "^4.0",
+      "hhvm/hacktest": "^2.0",
+      "hhvm/hhvm-autoload": "^2.0|^3.0"
+  }
+}
