@@ -1,6 +1,5 @@
 .DS_Store
 .var/
 vendor/
-tests/
 composer.lock
 .hhconfig

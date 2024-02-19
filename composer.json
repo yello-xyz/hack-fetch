@@ -9,10 +9,11 @@
       "hhvm/hsl": "^4.0"
   },
   "require-dev": {
+      "facebook/fbexpect": "^2.9",
       "hhvm/hhast": "^4.0",
       "hhvm/hacktest": "^2.0",
       "hhvm/hhvm-autoload": "^2.0|^3.0"
-  },
+    },
   "config": {
     "allow-plugins": {
       "hhvm/hhvm-autoload": true
