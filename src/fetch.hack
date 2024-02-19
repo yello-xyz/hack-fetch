@@ -23,7 +23,7 @@ class RawResponse implements Response {
 
 async function fetch_async(
   string $url,
-  shape(?'method' => string) $options = shape('method' => 'GET'))
+  shape(?'method' => string, ?'body' => string) $options = shape('method' => 'GET'))
 : Awaitable<Response> {
   $ch = \curl_init();
 
@@ -32,6 +32,11 @@ async function fetch_async(
 
   if (Shapes::idx($options, 'method') === 'POST') {
     \curl_setopt($ch, \CURLOPT_POST, 1);
+  }
+
+  $body = Shapes::idx($options, 'body');
+  if ($body !== null) {
+    \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
   }
 
   $result = await \HH\Asio\curl_exec($ch);
