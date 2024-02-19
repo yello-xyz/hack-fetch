@@ -2,6 +2,7 @@ namespace Yello\HackFetch;
 
 interface Response {
   public function text(): Awaitable<string>;
+  public function json(): Awaitable<mixed>;
 }
 
 class RawResponse implements Response {
@@ -13,6 +14,10 @@ class RawResponse implements Response {
 
   public async function text(): Awaitable<string> {
     return $this->raw_response;
+  }
+
+  public async function json(): Awaitable<mixed> {
+    return \json_decode($this->raw_response);
   }
 }
 
