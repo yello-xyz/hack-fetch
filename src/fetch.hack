@@ -26,7 +26,7 @@ async function fetch_async(
   shape(
     ?'method' => string,
     ?'body' => ?string,
-    ?'headers' => vec<string>) $options = shape('method' => 'GET', 'body' => null, 'headers' => vec[]))
+    ?'headers' => dict<string, string>) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]))
 : Awaitable<Response> {
   $ch = \curl_init();
 
@@ -39,7 +39,8 @@ async function fetch_async(
 
   $headers = Shapes::idx($options, 'headers');
   if ($headers !== null) {
-    \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers);
+    $headers_list = vec(\HH\Lib\Dict\map_with_key($headers, ($key, $value) ==> $key.': '.$value));
+    \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers_list);
   }
 
   $body = Shapes::idx($options, 'body');
