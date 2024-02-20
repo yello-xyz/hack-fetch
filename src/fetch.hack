@@ -1,6 +1,7 @@
 namespace Yello\HackFetch;
 
 interface Response {
+  public function body(): AsyncIterator<string>;
   public function textAsync(): Awaitable<string>;
   public function jsonAsync(): Awaitable<mixed>;
 }
@@ -12,12 +13,21 @@ final class RawResponse implements Response {
     $this->raw_response = $raw_response;
   }
 
+  public async function body(): AsyncIterator<string> {
+    yield $this->raw_response;
+  }
+
   public async function textAsync(): Awaitable<string> {
-    return $this->raw_response;
+    $text = '';
+    foreach ($this->body() await as $chunk) {
+      $text .= $chunk;
+    }
+    return $text;
   }
 
   public async function jsonAsync(): Awaitable<mixed> {
-    return \json_decode($this->raw_response);
+    $text = await $this->textAsync();
+    return \json_decode($text);
   }
 }
 
