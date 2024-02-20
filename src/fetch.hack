@@ -40,9 +40,7 @@ function fetch(
   ) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
 ): Response {
   $stream_async = async () ==> {
-    $ch = \curl_init();
-
-    \curl_setopt($ch, \CURLOPT_URL, $url);
+    $ch = \curl_init($url);
 
     if (Shapes::idx($options, 'method') === 'POST') {
       \curl_setopt($ch, \CURLOPT_POST, 1);
