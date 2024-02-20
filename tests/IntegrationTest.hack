@@ -18,6 +18,15 @@ final class IntegrationTest extends HackTest {
     expect($json->{'args'}->{'name'})->toBeSame('foobar');
   }
 
+  public async function testSimplePost(): Awaitable<void> {
+    $response = await fetch_async(
+      'https://httpbin.org/post',
+      shape('method' => 'POST', 'body' => 'param=23'),
+    );
+    $json = await $response->jsonAsync();
+    expect($json->{'form'}->{'param'})->toBeSame('23');
+  }
+
   public async function testPostJson(): Awaitable<void> {
     $response = await fetch_async(
       'https://httpbin.org/post',
