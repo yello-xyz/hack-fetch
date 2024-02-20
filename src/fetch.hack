@@ -52,10 +52,7 @@ async function fetch_async(
   }
 
   $result = new \HH\Lib\Ref('');
-  \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, function(
-    $ch,
-    $chunk,
-  ) use ($result) {
+  \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
     $result->set($result->get().$chunk);
     return \strlen($chunk);
   });
@@ -97,10 +94,7 @@ async function stream_async(
   }
 
   $result = new \HH\Lib\Ref('');
-  \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, function(
-    $ch,
-    $chunk,
-  ) use ($result) {
+  \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
     $result->set($result->get().$chunk);
     return \strlen($chunk);
   });
@@ -112,12 +106,15 @@ async function stream_async(
     $active = 1;
     do {
       $status = \curl_multi_exec($mh, inout $active);
-    } while ($status == \CURLM_CALL_MULTI_PERFORM);
+    } while ($status === \CURLM_CALL_MULTI_PERFORM);
     if (!\HH\Lib\Str\is_empty($result->get())) {
       yield $result->get();
       $result->set('');
     }
-    if (!$active) break;
+    if (!$active) {
+      break;
+    }
+    // HHAST_IGNORE_ERROR[DontAwaitInALoop]
     await \curl_multi_await($mh);
   } while ($status === \CURLM_OK);
 
