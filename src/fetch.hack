@@ -107,17 +107,19 @@ async function stream_async(
 
   $mh = \curl_multi_init();
   \curl_multi_add_handle($mh, $ch);
-  $active = 0;
+
   do {
-    $status = \curl_multi_exec($mh, inout $active);
+    $active = 1;
+    do {
+      $status = \curl_multi_exec($mh, inout $active);
+    } while ($status == \CURLM_CALL_MULTI_PERFORM);
     if (!\HH\Lib\Str\is_empty($result->get())) {
       yield $result->get();
       $result->set('');
     }
-    if ($active) {
-      \curl_multi_select($mh);
-    }
-  } while ($active && $status == \CURLM_OK);
+    if (!$active) break;
+    await \curl_multi_await($mh);
+  } while ($status === \CURLM_OK);
 
   \curl_multi_remove_handle($mh, $ch);
   \curl_close($ch);
