@@ -31,14 +31,14 @@ final class AsyncResponse implements Response {
   }
 }
 
-async function fetch_async(
+function fetch(
   string $url,
   shape(
     ?'method' => string,
     ?'body' => ?string,
     ?'headers' => dict<string, string>,
   ) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
-): Awaitable<Response> {
+): Response {
   $stream_async = async () ==> {
     $ch = \curl_init();
 
