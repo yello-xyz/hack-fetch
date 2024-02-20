@@ -51,9 +51,14 @@ async function fetch_async(
     \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
   }
 
-  $result = \curl_exec($ch);
+  $result = new \HH\Lib\Ref('');
+  \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, function($ch, $chunk) use ($result) {
+    $result->set($result->get().$chunk);
+    return \strlen($chunk);
+  });
 
+  \curl_exec($ch);
   \curl_close($ch);
 
-  return new RawResponse($result);
+  return new RawResponse($result->get());
 }
