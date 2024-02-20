@@ -1,3 +1,4 @@
+use namespace HH\Lib\C;
 use type Facebook\HackTest\HackTest;
 use function Facebook\FBExpect\expect;
 use function Yello\HackFetch\fetch_async;
@@ -31,5 +32,17 @@ final class IntegrationTest extends HackTest {
     );
     $json = await $response->jsonAsync();
     expect($json->{'title'})->toBeSame('foo');
+  }
+
+  public async function testStreamResponse(): Awaitable<void> {
+    $response = await fetch_async(
+      'https://jsonplaceholder.typicode.com/posts/1/comments',
+    );
+    $text = '';
+    foreach ($response->body() await as $chunk) {
+      $text .= $chunk;
+    }
+    $json = \json_decode($text);
+    expect(C\count($json))->toBeSame(5);
   }
 }
