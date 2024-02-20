@@ -31,14 +31,14 @@ final class AsyncResponse implements Response {
   }
 }
 
-function fetch(
+async function fetch_async(
   string $url,
   shape(
     ?'method' => string,
     ?'body' => ?string,
     ?'headers' => dict<string, string>,
   ) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
-): Response {
+): Awaitable<Response> {
   $stream_async = async () ==> {
     $ch = \curl_init($url);
 
@@ -93,5 +93,21 @@ function fetch(
     \curl_multi_close($mh);
   };
 
-  return new AsyncResponse($stream_async());
+  $responses = $stream_async();
+  $firstResponse = null;
+  foreach ($responses await as $response) {
+    $firstResponse = $response;
+    break;
+  }
+
+  $iterator = async () ==> {
+    if ($firstResponse) {
+      yield $firstResponse;
+    }
+    foreach ($responses await as $response) {
+      yield $response;
+    }
+  };
+
+  return new AsyncResponse($iterator());
 }

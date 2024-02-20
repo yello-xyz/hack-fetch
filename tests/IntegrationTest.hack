@@ -1,11 +1,11 @@
 use namespace HH\Lib\C;
 use type Facebook\HackTest\HackTest;
 use function Facebook\FBExpect\expect;
-use function Yello\HackFetch\fetch;
+use function Yello\HackFetch\fetch_async;
 
 final class IntegrationTest extends HackTest {
   public async function testGetText(): Awaitable<void> {
-    $response = fetch('https://httpbin.org/get?param=23');
+    $response = await fetch_async('https://httpbin.org/get?param=23');
     $text = await $response->textAsync();
     expect(\substr($text, 0, 40))->toBeSame(
       "{\n  \"args\": {\n    \"param\": \"23\"\n  }, \n  ",
@@ -13,13 +13,13 @@ final class IntegrationTest extends HackTest {
   }
 
   public async function testGetJson(): Awaitable<void> {
-    $response = fetch('https://httpbin.org/get?name=foobar');
+    $response = await fetch_async('https://httpbin.org/get?name=foobar');
     $json = await $response->jsonAsync();
     expect($json->{'args'}->{'name'})->toBeSame('foobar');
   }
 
   public async function testPostJson(): Awaitable<void> {
-    $response = fetch(
+    $response = await fetch_async(
       'https://httpbin.org/post',
       shape(
         'method' => 'POST',
@@ -32,7 +32,8 @@ final class IntegrationTest extends HackTest {
   }
 
   public async function testStreamResponse(): Awaitable<void> {
-    $response = fetch('https://httpbin.org/stream-bytes/100?chunk_size=1');
+    $response =
+      await fetch_async('https://httpbin.org/stream-bytes/100?chunk_size=1');
     $chunks = vec[];
     foreach ($response->body() await as $chunk) {
       $chunks[] = $chunk;
