@@ -9,7 +9,7 @@ final class RawResponse implements Response {
   private string $raw_response;
 
   public function __construct(string $raw_response) {
-     $this->raw_response = $raw_response;
+    $this->raw_response = $raw_response;
   }
 
   public async function textAsync(): Awaitable<string> {
@@ -26,12 +26,13 @@ async function fetch_async(
   shape(
     ?'method' => string,
     ?'body' => ?string,
-    ?'headers' => dict<string, string>) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]))
-: Awaitable<Response> {
+    ?'headers' => dict<string, string>,
+  ) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
+): Awaitable<Response> {
   $ch = \curl_init();
 
   \curl_setopt($ch, \CURLOPT_URL, $url);
-  \curl_setopt($ch, \CURLOPT_RETURNTRANSFER, 1);
+  \curl_setopt($ch, \CURLOPT_RETURNTRANSFER, true);
 
   if (Shapes::idx($options, 'method') === 'POST') {
     \curl_setopt($ch, \CURLOPT_POST, 1);
@@ -39,7 +40,9 @@ async function fetch_async(
 
   $headers = Shapes::idx($options, 'headers');
   if ($headers !== null) {
-    $headers_list = vec(\HH\Lib\Dict\map_with_key($headers, ($key, $value) ==> $key.': '.$value));
+    $headers_list = vec(
+      \HH\Lib\Dict\map_with_key($headers, ($key, $value) ==> $key.': '.$value),
+    );
     \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers_list);
   }
 
@@ -48,7 +51,7 @@ async function fetch_async(
     \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
   }
 
-  $result = await \HH\Asio\curl_exec($ch);
+  $result = \curl_exec($ch);
 
   \curl_close($ch);
 
