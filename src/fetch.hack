@@ -37,16 +37,16 @@ type RequestOptions = shape(
   ?'headers' => dict<string, string>,
 );
 
-async function fetch_async(
-  string $url,
-  RequestOptions $options =
-    shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
-): Awaitable<Response> {
-  $stream_async = async () ==> {
-    $ch = \curl_init($url);
+final class Consumer {
+  private resource $curl_handle;
+  private resource $multi_handle;
+  private \HH\Lib\Ref<string> $result;
+
+  public function __construct(string $url, RequestOptions $options) {
+    $this->curl_handle = \curl_init($url);
 
     if (Shapes::idx($options, 'method') === 'POST') {
-      \curl_setopt($ch, \CURLOPT_POST, 1);
+      \curl_setopt($this->curl_handle, \CURLOPT_POST, 1);
     }
 
     $headers = Shapes::idx($options, 'headers');
@@ -57,48 +57,58 @@ async function fetch_async(
           ($key, $value) ==> $key.': '.$value,
         ),
       );
-      \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers_list);
+      \curl_setopt($this->curl_handle, \CURLOPT_HTTPHEADER, $headers_list);
     }
 
     $body = Shapes::idx($options, 'body');
     if ($body !== null) {
-      \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
+      \curl_setopt($this->curl_handle, \CURLOPT_POSTFIELDS, $body);
     }
 
-    $result = new \HH\Lib\Ref('');
-    \curl_setopt($ch, \CURLOPT_RETURNTRANSFER, true);
-    \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
-      $result->set($result->get().$chunk);
+    $this->result = new \HH\Lib\Ref('');
+    \curl_setopt($this->curl_handle, \CURLOPT_RETURNTRANSFER, true);
+    \curl_setopt($this->curl_handle, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
+      $this->result->set($this->result->get().$chunk);
       return \strlen($chunk);
     });
 
-    $mh = \curl_multi_init();
-    \curl_multi_add_handle($mh, $ch);
+    $this->multi_handle = \curl_multi_init();
+    \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
+  }
 
+  public async function consume(): AsyncIterator<string> {
     do {
       $active = 1;
       do {
-        $status = \curl_multi_exec($mh, inout $active);
+        $status = \curl_multi_exec($this->multi_handle, inout $active);
       } while ($status === \CURLM_CALL_MULTI_PERFORM);
-      if (!\HH\Lib\Str\is_empty($result->get())) {
-        yield $result->get();
-        $result->set('');
+      if (!\HH\Lib\Str\is_empty($this->result->get())) {
+        yield $this->result->get();
+        $this->result->set('');
       }
       if (!$active) {
         break;
       }
       // HHAST_IGNORE_ERROR[DontAwaitInALoop]
-      await \curl_multi_await($mh);
+      await \curl_multi_await($this->multi_handle);
     } while ($status === \CURLM_OK);
 
-    $status = \curl_getinfo($ch, \CURLINFO_RESPONSE_CODE);
+    $status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
 
-    \curl_multi_remove_handle($mh, $ch);
-    \curl_close($ch);
-    \curl_multi_close($mh);
-  };
+    \curl_multi_remove_handle($this->multi_handle, $this->curl_handle);
+    \curl_close($this->curl_handle);
+    \curl_multi_close($this->multi_handle);
+  }
+}
 
-  $responses = $stream_async();
+async function fetch_async(
+  string $url,
+  RequestOptions $options =
+    shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
+): Awaitable<Response> {
+  $consumer = new Consumer($url, $options);
+  $responses = $consumer->consume();
+
   $firstResponse = null;
   foreach ($responses await as $response) {
     $firstResponse = $response;
