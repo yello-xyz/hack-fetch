@@ -40,6 +40,7 @@ type RequestOptions = shape(
 final class Consumer {
   private resource $curl_handle;
   private resource $multi_handle;
+  private bool $active = false;
   private string $buffered_output = '';
 
   public function __construct(string $url, RequestOptions $options) {
@@ -93,30 +94,35 @@ final class Consumer {
     );
   }
 
+  public async function initializeAsync(): Awaitable<void> {
+    $this->execOnce();
+  }
+
   public async function consume(): AsyncIterator<string> {
     do {
-      $status_ok = $this->execOnce();
       if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
         yield $this->buffered_output;
         $this->buffered_output = '';
       }
-      if ($status_ok) {
-        // HHAST_IGNORE_ERROR[DontAwaitInALoop]
-        await \curl_multi_await($this->multi_handle);
+      if (!$this->active) {
+        break;
       }
-    } while ($status_ok);
+      // HHAST_IGNORE_ERROR[DontAwaitInALoop]
+      await \curl_multi_await($this->multi_handle);
+      $this->execOnce();
+    } while (true);
 
     // $reponse_code = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
 
     $this->close();
   }
 
-  private function execOnce(): bool {
+  private function execOnce(): void {
     $active = 1;
     do {
       $status = \curl_multi_exec($this->multi_handle, inout $active);
     } while ($status === \CURLM_CALL_MULTI_PERFORM);
-    return $active && $status === \CURLM_OK;
+    $this->active = $active && $status === \CURLM_OK;
   }
 }
 
@@ -126,22 +132,6 @@ async function fetch_async(
     shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
 ): Awaitable<Response> {
   $consumer = new Consumer($url, $options);
-  $responses = $consumer->consume();
-
-  $firstResponse = null;
-  foreach ($responses await as $response) {
-    $firstResponse = $response;
-    break;
-  }
-
-  $iterator = async () ==> {
-    if ($firstResponse) {
-      yield $firstResponse;
-    }
-    foreach ($responses await as $response) {
-      yield $response;
-    }
-  };
-
-  return new AsyncResponse($iterator());
+  await $consumer->initializeAsync();
+  return new AsyncResponse($consumer->consume());
 }
