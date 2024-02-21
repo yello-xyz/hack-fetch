@@ -91,10 +91,7 @@ final class Consumer {
 
   public async function consume(): AsyncIterator<string> {
     do {
-      $active = 1;
-      do {
-        $status = \curl_multi_exec($this->multi_handle, inout $active);
-      } while ($status === \CURLM_CALL_MULTI_PERFORM);
+      list($active, $status) = $this->execOnce();
       if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
         yield $this->buffered_output;
         $this->buffered_output = '';
@@ -109,6 +106,14 @@ final class Consumer {
     $status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
 
     $this->close();
+  }
+
+  private function execOnce(): (int, int) {
+    $active = 1;
+    do {
+      $status = \curl_multi_exec($this->multi_handle, inout $active);
+    } while ($status === \CURLM_CALL_MULTI_PERFORM);
+    return tuple($active, $status);
   }
 }
 
