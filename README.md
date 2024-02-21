@@ -1,8 +1,6 @@
 # HackFetch
-Simple cURL wrapper for Hacklang. API inspired by [node-fetch](https://www.npmjs.com/package/node-fetch)/`window.fetch`.
-## Motivation
-Wanted to play around with Hack but couldn't even find a basic HTTP client that wasn't completely abandoned.
-## Basic usage
+Simple cURL wrapper for Hacklang. Basic HTTP client API inspired by [node-fetch](https://www.npmjs.com/package/node-fetch).
+## Usage
 ### Plain text or HTML
 ```Hack
 use function Yello\HackFetch\fetch_async;
