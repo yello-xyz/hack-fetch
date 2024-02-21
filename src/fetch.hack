@@ -91,6 +91,8 @@ async function fetch_async(
       await \curl_multi_await($mh);
     } while ($status === \CURLM_OK);
 
+    $status = \curl_getinfo($ch, \CURLINFO_RESPONSE_CODE);
+
     \curl_multi_remove_handle($mh, $ch);
     \curl_close($ch);
     \curl_multi_close($mh);
