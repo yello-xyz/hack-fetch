@@ -50,6 +50,16 @@ final class Consumer {
     \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
   }
 
+  public function __dispose(): void {
+    $this->close();
+  }
+
+  private function close(): void {
+    \curl_multi_remove_handle($this->multi_handle, $this->curl_handle);
+    \curl_close($this->curl_handle);
+    \curl_multi_close($this->multi_handle);
+  }
+
   private function initializeOptions(RequestOptions $options): void {
     if (Shapes::idx($options, 'method') === 'POST') {
       \curl_setopt($this->curl_handle, \CURLOPT_POST, 1);
@@ -98,9 +108,7 @@ final class Consumer {
 
     $status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
 
-    \curl_multi_remove_handle($this->multi_handle, $this->curl_handle);
-    \curl_close($this->curl_handle);
-    \curl_multi_close($this->multi_handle);
+    $this->close();
   }
 }
 
