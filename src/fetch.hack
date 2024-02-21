@@ -1,6 +1,7 @@
 namespace Yello\HackFetch;
 
 interface Response {
+  public function headers(): dict<string, string>;
   public function status(): int;
   public function ok(): bool;
   public function body(): AsyncIterator<string>;
@@ -20,6 +21,7 @@ final class Client implements Response {
   private string $buffered_output = '';
   private ?string $first_response = null;
   private int $status = -1;
+  private dict<string, string> $headers = dict[];
 
   public function __construct(string $url, RequestOptions $options) {
     $this->curl_handle = \curl_init($url);
@@ -56,6 +58,10 @@ final class Client implements Response {
   public async function jsonAsync(): Awaitable<mixed> {
     $text = await $this->textAsync();
     return \json_decode($text);
+  }
+
+  public function headers(): dict<string, string> {
+    return $this->headers;
   }
 
   public function status(): int {
@@ -106,6 +112,18 @@ final class Client implements Response {
         $this->buffered_output .= $chunk;
         $this->status = \curl_getinfo($ch, \CURLINFO_RESPONSE_CODE);
         return \strlen($chunk);
+      },
+    );
+
+    \curl_setopt(
+      $this->curl_handle,
+      \CURLOPT_HEADERFUNCTION,
+      ($_ch, $header) ==> {
+        $key_value = \explode(':', $header, 2);
+        if (\count($key_value) === 2) {
+          $this->headers[\strtolower(\trim($key_value[0]))] = \trim($key_value[1]);
+        }
+        return \strlen($header);
       },
     );
   }

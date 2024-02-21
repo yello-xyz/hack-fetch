@@ -19,6 +19,7 @@ final class IntegrationTest extends HackTest {
     $json = await $response->jsonAsync();
     expect($response->ok())->toBeTrue();
     expect($response->status())->toBeSame(200);
+    expect($response->headers()['content-type'])->toBeSame('application/json');
     expect($json->{'args'}->{'name'})->toBeSame('foobar');
   }
 
@@ -57,6 +58,7 @@ final class IntegrationTest extends HackTest {
     }
     expect($response->ok())->toBeTrue();
     expect($response->status())->toBeSame(200);
+    expect($response->headers()['content-type'])->toBeSame('application/octet-stream');
     expect(C\count($chunks))->toBeGreaterThan(1);
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
@@ -71,6 +73,7 @@ final class IntegrationTest extends HackTest {
     $response = await fetch_async('https://httpbin.org/not-found');
     expect($response->ok())->toBeFalse();
     expect($response->status())->toBeSame(404);
+    expect($response->headers()['content-type'])->toBeSame('text/html');
   }
 
   public async function testInvalidDomain(): Awaitable<void> {
