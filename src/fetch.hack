@@ -1,6 +1,8 @@
 namespace Yello\HackFetch;
 
 interface Response {
+  public function status(): int;
+  public function ok(): bool;
   public function body(): AsyncIterator<string>;
   public function textAsync(): Awaitable<string>;
   public function jsonAsync(): Awaitable<mixed>;
@@ -16,7 +18,17 @@ final class Client implements Response {
   private resource $curl_handle;
   private resource $multi_handle;
   private bool $active = false;
+  private int $status = -1;
+  private bool $ok = false;
   private string $buffered_output = '';
+
+  public function status(): int {
+    return $this->status;
+  }
+
+  public function ok(): bool {
+    return $this->ok;
+  }
 
   public function body(): AsyncIterator<string> {
     return $this->consume();
@@ -104,7 +116,8 @@ final class Client implements Response {
       $this->execOnce();
     } while (true);
 
-    // $reponse_code = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
+    $this->status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
+    $this->ok = $this->status >= 200 && $this->status < 300;
 
     $this->close();
   }
