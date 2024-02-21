@@ -1,5 +1,6 @@
 {
   "name": "yello/hack-fetch",
+  "type": "library",
   "description": "Simple cURL wrapper for Hacklang",
   "keywords": ["curl", "http", "hhvm", "hack"],
   "homepage": "https://github.com/yello-xyz/hack-fetch",
