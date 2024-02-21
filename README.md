@@ -57,7 +57,7 @@ use function Yello\HackFetch\fetch_async;
 
 $response = await fetch_async('https://github.com/');
 
-echo $response->ok() ? "OK" : "NOK";
+echo $response->ok() ? 'OK' : 'NOK';
 echo $response->status();
 echo $response->headers()['content-type'];
 ```
