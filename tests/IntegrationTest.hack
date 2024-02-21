@@ -92,20 +92,22 @@ final class IntegrationTest extends HackTest {
     $file_name = 'test.png';
     $check_sum = '5cca6069f68fbf739fce37e0963f21e7';
 
-    $file = fopen($file_name, 'w');
     $response = await fetch_async('https://httpbin.org/image/png');
+    $file = fopen($file_name, 'w');
     foreach ($response->body() await as $chunk) {
       fwrite($file, $chunk);
     }
     fclose($file);
+
     expect(\md5_file($file_name))->toBeSame($check_sum);
 
     $file = fopen($file_name, 'r');
     $response =
       await fetch_async('https://httpbin.org/anything', shape('file' => $file));
-    $json = await $response->jsonAsync();
     fclose($file);
     \unlink($file_name);
+
+    $json = await $response->jsonAsync();
 
     $file = fopen($file_name, 'w');
     fwrite($file, \base64_decode(\substr(
@@ -113,6 +115,7 @@ final class IntegrationTest extends HackTest {
       \strlen('data:application/octet-stream;base64,'),
     )));
     fclose($file);
+
     expect(\md5_file($file_name))->toBeSame($check_sum);
     \unlink($file_name);
   }
