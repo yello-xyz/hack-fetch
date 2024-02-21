@@ -31,13 +31,16 @@ final class AsyncResponse implements Response {
   }
 }
 
+type RequestOptions = shape(
+  ?'method' => string,
+  ?'body' => ?string,
+  ?'headers' => dict<string, string>,
+);
+
 async function fetch_async(
   string $url,
-  shape(
-    ?'method' => string,
-    ?'body' => ?string,
-    ?'headers' => dict<string, string>,
-  ) $options = shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
+  RequestOptions $options =
+    shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
 ): Awaitable<Response> {
   $stream_async = async () ==> {
     $ch = \curl_init($url);
