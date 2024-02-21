@@ -47,18 +47,18 @@ $data = await $response->jsonAsync();
 
 echo $data;
 ```
-### Handling exceptions
-Note that 3xx-5xx responses are *not* exceptions (see next section). Wrapping the fetch function into a try/catch block will catch all exceptions, including errors originating from core libraries, network errors, and operational errors.
+### Accessing headers and other metadata
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
-try {
-  await fetch_async('https://domain.invalid');
-} catch (\Exception $e) {
-  echo $e->getMessage(); // Could not resolve host: domain.invalid
-}
+$response = await fetch_async('https://github.com/');
+
+echo $response->ok() ? "OK" : "NOK";
+echo $response->status();
+echo $response->headers()['content-type'];
 ```
 ### Handling client and server errors
+Note that 3xx-5xx responses are *not* exceptions.
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
@@ -69,25 +69,48 @@ if ($response->ok()) {
   echo $response->status(); // 400
 }
 ```
+### Handling exceptions
+Wrapping the fetch function into a try/catch block will catch all exceptions, including errors originating from core libraries, network errors, and operational errors.
+```Hack
+use function Yello\HackFetch\fetch_async;
+
+try {
+  await fetch_async('https://domain.invalid');
+} catch (\Exception $e) {
+  echo $e->getMessage(); // Could not resolve host: domain.invalid
+}
+```
 ### Streams
 You can use async iterators to read the response body.
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
 $response = 
-  await fetch_async('https://httpbin.org/stream-bytes/100?chunk_size=1');
+  await fetch_async('https://httpbin.org/stream/3');
 
 foreach ($response->body() await as $chunk) {
   echo $chunk;
 }
 ```
-### Accessing headers and other metadata
+### File download
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
-$response = await fetch_async('https://github.com/');
+$file = fopen($file_name, 'w');
+$response = await fetch_async('https://httpbin.org/image/png');
+foreach ($response->body() await as $chunk) {
+  fwrite($file, $chunk);
+}
+fclose($file);
+```
+### File upload
+```Hack
+use function Yello\HackFetch\fetch_async;
 
-echo $response->ok();
+$file = fopen('test.png', 'r');
+$response =
+  await fetch_async('https://httpbin.org/anything', shape('file' => $file));
+fclose($file);
+
 echo $response->status();
-echo $response->headers()['content-type'];
 ```
