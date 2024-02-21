@@ -58,7 +58,9 @@ final class IntegrationTest extends HackTest {
     }
     expect($response->ok())->toBeTrue();
     expect($response->status())->toBeSame(200);
-    expect($response->headers()['content-type'])->toBeSame('application/octet-stream');
+    expect($response->headers()['content-type'])->toBeSame(
+      'application/octet-stream',
+    );
     expect(C\count($chunks))->toBeGreaterThan(1);
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
@@ -81,7 +83,23 @@ final class IntegrationTest extends HackTest {
       await fetch_async('https://domain.invalid');
       expect(true)->toBeFalse();
     } catch (\Exception $e) {
-      expect($e->getMessage())->toBeSame('Could not resolve host: domain.invalid');
+      expect($e->getMessage())->toBeSame(
+        'Could not resolve host: domain.invalid',
+      );
     }
+  }
+
+  public async function testFileTransfer(): Awaitable<void> {
+    $file_name = 'original.png';
+    $tf = \HH\Lib\File\open_write_only($file_name);
+    $response = await fetch_async(
+      'https://octodex.github.com/images/original.png',
+    );
+    foreach ($response->body() await as $chunk) {
+      await $tf->writeAllAsync($chunk);
+    }
+    $tf->close();
+    expect(\md5_file($file_name))->toBeSame('23d533d41d80f16e182fe649161d0ad8');
+    \unlink($file_name);
   }
 }
