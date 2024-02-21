@@ -1,4 +1,3 @@
-use namespace HH\Lib\C;
 use type Facebook\HackTest\HackTest;
 use function Facebook\FBExpect\expect;
 use function Yello\HackFetch\fetch_async;
@@ -61,7 +60,7 @@ final class IntegrationTest extends HackTest {
     expect($response->headers()['content-type'])->toBeSame(
       'application/octet-stream',
     );
-    expect(C\count($chunks))->toBeGreaterThan(1);
+    expect(\count($chunks))->toBeGreaterThan(1);
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
 
@@ -93,26 +92,27 @@ final class IntegrationTest extends HackTest {
     $file_name = 'test.png';
     $check_sum = '5cca6069f68fbf739fce37e0963f21e7';
 
-    $tf = \HH\Lib\File\open_write_only($file_name);
+    $file = fopen($file_name, 'w');
     $response = await fetch_async('https://httpbin.org/image/png');
     foreach ($response->body() await as $chunk) {
-      await $tf->writeAllAsync($chunk);
+      fwrite($file, $chunk);
     }
-    $tf->close();
+    fclose($file);
     expect(\md5_file($file_name))->toBeSame($check_sum);
 
-    $tf = fopen($file_name, 'r');
+    $file = fopen($file_name, 'r');
     $response =
-      await fetch_async('https://httpbin.org/anything', shape('file' => $tf));
+      await fetch_async('https://httpbin.org/anything', shape('file' => $file));
     $json = await $response->jsonAsync();
+    fclose($file);
     \unlink($file_name);
 
-    $tf = \HH\Lib\File\open_write_only($file_name);
-    await $tf->writeAllAsync(\base64_decode(\substr(
+    $file = fopen($file_name, 'w');
+    fwrite($file, \base64_decode(\substr(
       $json->{'data'},
       \strlen('data:application/octet-stream;base64,'),
     )));
-    $tf->close();
+    fclose($file);
     expect(\md5_file($file_name))->toBeSame($check_sum);
     \unlink($file_name);
   }
