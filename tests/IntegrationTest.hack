@@ -61,6 +61,12 @@ final class IntegrationTest extends HackTest {
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
 
+  public async function testStatus(): Awaitable<void> {
+    $response = await fetch_async('https://httpbin.org/status/300');
+    expect($response->ok())->toBeFalse();
+    expect($response->status())->toBeSame(300);
+  }
+
   public async function testNotFound(): Awaitable<void> {
     $response = await fetch_async('https://httpbin.org/not-found');
     expect($response->ok())->toBeFalse();
@@ -69,7 +75,7 @@ final class IntegrationTest extends HackTest {
 
   public async function testInvalidDomain(): Awaitable<void> {
     try {
-      $response = await fetch_async('https://domain.invalid');
+      await fetch_async('https://domain.invalid');
       expect(true)->toBeFalse();
     } catch (\Exception $e) {
       expect($e->getMessage())->toBeSame('Could not resolve host: domain.invalid');

@@ -20,7 +20,6 @@ final class Client implements Response {
   private string $buffered_output = '';
   private ?string $first_response = null;
   private int $status = -1;
-  private bool $ok = false;
 
   public function __construct(string $url, RequestOptions $options) {
     $this->curl_handle = \curl_init($url);
@@ -64,7 +63,7 @@ final class Client implements Response {
   }
 
   public function ok(): bool {
-    return $this->ok;
+    return $this->status >= 200 && $this->status < 300;
   }
 
   public function __dispose(): void {
@@ -106,7 +105,6 @@ final class Client implements Response {
       ($ch, $chunk) ==> {
         $this->buffered_output .= $chunk;
         $this->status = \curl_getinfo($ch, \CURLINFO_RESPONSE_CODE);
-        $this->ok = $this->status >= 200 && $this->status < 300;
         return \strlen($chunk);
       },
     );
@@ -133,6 +131,7 @@ final class Client implements Response {
       await \curl_multi_await($this->multi_handle);
     } while ($status === \CURLM_OK);
 
+    $this->status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
     $error = \curl_error($this->curl_handle);
 
     $this->close();
