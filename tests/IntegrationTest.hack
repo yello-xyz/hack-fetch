@@ -7,6 +7,8 @@ final class IntegrationTest extends HackTest {
   public async function testGetText(): Awaitable<void> {
     $response = await fetch_async('https://httpbin.org/get?param=23');
     $text = await $response->textAsync();
+    expect($response->ok())->toBeTrue();
+    expect($response->status())->toBeSame(200);
     expect(\substr($text, 0, 40))->toBeSame(
       "{\n  \"args\": {\n    \"param\": \"23\"\n  }, \n  ",
     );
@@ -15,6 +17,8 @@ final class IntegrationTest extends HackTest {
   public async function testGetJson(): Awaitable<void> {
     $response = await fetch_async('https://httpbin.org/get?name=foobar');
     $json = await $response->jsonAsync();
+    expect($response->ok())->toBeTrue();
+    expect($response->status())->toBeSame(200);
     expect($json->{'args'}->{'name'})->toBeSame('foobar');
   }
 
@@ -24,6 +28,8 @@ final class IntegrationTest extends HackTest {
       shape('method' => 'POST', 'body' => 'param=23'),
     );
     $json = await $response->jsonAsync();
+    expect($response->ok())->toBeTrue();
+    expect($response->status())->toBeSame(200);
     expect($json->{'form'}->{'param'})->toBeSame('23');
   }
 
@@ -37,6 +43,8 @@ final class IntegrationTest extends HackTest {
       ),
     );
     $json = await $response->jsonAsync();
+    expect($response->ok())->toBeTrue();
+    expect($response->status())->toBeSame(200);
     expect(\json_decode($json->{'data'})->{'param'})->toBeSame(23);
   }
 
@@ -47,6 +55,8 @@ final class IntegrationTest extends HackTest {
     foreach ($response->body() await as $chunk) {
       $chunks[] = $chunk;
     }
+    expect($response->ok())->toBeTrue();
+    expect($response->status())->toBeSame(200);
     expect(C\count($chunks))->toBeGreaterThan(1);
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
