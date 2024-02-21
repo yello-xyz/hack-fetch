@@ -5,7 +5,7 @@ Simple cURL wrapper for Hacklang. Basic HTTP client API inspired by [node-fetch]
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
-$response = await fetch_async('https://httpbin.org/get?param=23');
+$response = await fetch_async('https://github.com/');
 $body = await $response->textAsync();
 
 echo $body;
@@ -14,7 +14,7 @@ echo $body;
 ```Hack
 use function Yello\HackFetch\fetch_async;
 
-$response = await fetch_async('https://httpbin.org/get?name=foobar');
+$response = await fetch_async('https://api.github.com/users/github');
 $data = await $response->jsonAsync();
 
 echo $data;
@@ -25,7 +25,7 @@ use function Yello\HackFetch\fetch_async;
 
 $response = await fetch_async(
   'https://httpbin.org/post',
-  shape('method' => 'POST', 'body' => 'param=23'),
+  shape('method' => 'POST', 'body' => 'a=1'),
 );
 $data = await $response->jsonAsync();
 
@@ -39,7 +39,7 @@ $response = await fetch_async(
   'https://httpbin.org/post',
   shape(
     'method' => 'POST',
-    'body' => \json_encode(shape('param' => 23, 'name' => 'foobar')),
+    'body' => \json_encode(shape('a' => 1)),
     'headers' => dict['content-type' => 'application/json'],
   ),
 );
@@ -80,4 +80,14 @@ $response =
 foreach ($response->body() await as $chunk) {
   echo $chunk;
 }
+```
+### Accessing headers and other metadata
+```Hack
+use function Yello\HackFetch\fetch_async;
+
+$response = await fetch_async('https://github.com/');
+
+echo $response->ok();
+echo $response->status();
+echo $response->headers()['content-type'];
 ```
