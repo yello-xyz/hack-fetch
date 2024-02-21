@@ -90,16 +90,30 @@ final class IntegrationTest extends HackTest {
   }
 
   public async function testFileTransfer(): Awaitable<void> {
-    $file_name = 'original.png';
+    $file_name = 'test.png';
+    $check_sum = '5cca6069f68fbf739fce37e0963f21e7';
+
     $tf = \HH\Lib\File\open_write_only($file_name);
-    $response = await fetch_async(
-      'https://octodex.github.com/images/original.png',
-    );
+    $response = await fetch_async('https://httpbin.org/image/png');
     foreach ($response->body() await as $chunk) {
       await $tf->writeAllAsync($chunk);
     }
     $tf->close();
-    expect(\md5_file($file_name))->toBeSame('23d533d41d80f16e182fe649161d0ad8');
+    expect(\md5_file($file_name))->toBeSame($check_sum);
+
+    $tf = fopen($file_name, 'r');
+    $response =
+      await fetch_async('https://httpbin.org/anything', shape('file' => $tf));
+    $json = await $response->jsonAsync();
+    \unlink($file_name);
+
+    $tf = \HH\Lib\File\open_write_only($file_name);
+    await $tf->writeAllAsync(\base64_decode(\substr(
+      $json->{'data'},
+      \strlen('data:application/octet-stream;base64,'),
+    )));
+    $tf->close();
+    expect(\md5_file($file_name))->toBeSame($check_sum);
     \unlink($file_name);
   }
 }

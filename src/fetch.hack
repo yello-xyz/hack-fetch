@@ -12,6 +12,7 @@ interface Response {
 type RequestOptions = shape(
   ?'method' => string,
   ?'body' => ?string,
+  ?'file' => ?resource,
   ?'headers' => dict<string, string>,
 );
 
@@ -101,6 +102,13 @@ final class Client implements Response {
     $body = Shapes::idx($options, 'body');
     if ($body !== null) {
       \curl_setopt($this->curl_handle, \CURLOPT_POSTFIELDS, $body);
+    }
+
+    $file = Shapes::idx($options, 'file');
+    if ($file !== null) {
+      \curl_setopt($this->curl_handle, \CURLOPT_INFILE, $file);
+      \curl_setopt($this->curl_handle, \CURLOPT_INFILESIZE, \fstat($file)['size']);
+      \curl_setopt($this->curl_handle, \CURLOPT_UPLOAD, true);
     }
 
     \curl_setopt($this->curl_handle, \CURLOPT_RETURNTRANSFER, true);
