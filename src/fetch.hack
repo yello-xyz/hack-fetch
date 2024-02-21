@@ -83,37 +83,40 @@ final class Consumer {
 
     \curl_setopt($this->curl_handle, \CURLOPT_RETURNTRANSFER, true);
 
-    \curl_setopt($this->curl_handle, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
-      $this->buffered_output .= $chunk;
-      return \strlen($chunk);
-    });
+    \curl_setopt(
+      $this->curl_handle,
+      \CURLOPT_WRITEFUNCTION,
+      ($_ch, $chunk) ==> {
+        $this->buffered_output .= $chunk;
+        return \strlen($chunk);
+      },
+    );
   }
 
   public async function consume(): AsyncIterator<string> {
     do {
-      list($active, $status) = $this->execOnce();
+      $status_ok = $this->execOnce();
       if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
         yield $this->buffered_output;
         $this->buffered_output = '';
       }
-      if (!$active) {
-        break;
+      if ($status_ok) {
+        // HHAST_IGNORE_ERROR[DontAwaitInALoop]
+        await \curl_multi_await($this->multi_handle);
       }
-      // HHAST_IGNORE_ERROR[DontAwaitInALoop]
-      await \curl_multi_await($this->multi_handle);
-    } while ($status === \CURLM_OK);
+    } while ($status_ok);
 
-    $status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
+    // $reponse_code = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
 
     $this->close();
   }
 
-  private function execOnce(): (int, int) {
+  private function execOnce(): bool {
     $active = 1;
     do {
       $status = \curl_multi_exec($this->multi_handle, inout $active);
     } while ($status === \CURLM_CALL_MULTI_PERFORM);
-    return tuple($active, $status);
+    return $active && $status === \CURLM_OK;
   }
 }
 
