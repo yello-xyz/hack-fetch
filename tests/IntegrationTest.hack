@@ -60,4 +60,11 @@ final class IntegrationTest extends HackTest {
     expect(C\count($chunks))->toBeGreaterThan(1);
     expect(\strlen(\HH\Lib\Str\join($chunks, '')))->toBeSame(100);
   }
+
+  public async function testNotFound(): Awaitable<void> {
+    $response = await fetch_async('https://httpbin.org/not-found');
+    $text = await $response->textAsync();
+    expect($response->ok())->toBeFalse();
+    expect($response->status())->toBeSame(404);
+  }
 }
