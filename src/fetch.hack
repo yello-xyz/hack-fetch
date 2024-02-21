@@ -44,9 +44,19 @@ final class Consumer {
 
   public function __construct(string $url, RequestOptions $options) {
     $this->curl_handle = \curl_init($url);
+    $this->result = new \HH\Lib\Ref('');
+    Consumer::initializeOptions($this->curl_handle, $options, $this->result);
+    $this->multi_handle = \curl_multi_init();
+    \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
+  }
 
+  private static function initializeOptions(
+    resource $ch,
+    RequestOptions $options,
+    \HH\Lib\Ref<string> $result,
+  ): void {
     if (Shapes::idx($options, 'method') === 'POST') {
-      \curl_setopt($this->curl_handle, \CURLOPT_POST, 1);
+      \curl_setopt($ch, \CURLOPT_POST, 1);
     }
 
     $headers = Shapes::idx($options, 'headers');
@@ -57,23 +67,19 @@ final class Consumer {
           ($key, $value) ==> $key.': '.$value,
         ),
       );
-      \curl_setopt($this->curl_handle, \CURLOPT_HTTPHEADER, $headers_list);
+      \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers_list);
     }
 
     $body = Shapes::idx($options, 'body');
     if ($body !== null) {
-      \curl_setopt($this->curl_handle, \CURLOPT_POSTFIELDS, $body);
+      \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
     }
 
-    $this->result = new \HH\Lib\Ref('');
-    \curl_setopt($this->curl_handle, \CURLOPT_RETURNTRANSFER, true);
-    \curl_setopt($this->curl_handle, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
-      $this->result->set($this->result->get().$chunk);
+    \curl_setopt($ch, \CURLOPT_RETURNTRANSFER, true);
+    \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
+      $result->set($result->get().$chunk);
       return \strlen($chunk);
     });
-
-    $this->multi_handle = \curl_multi_init();
-    \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
   }
 
   public async function consume(): AsyncIterator<string> {
