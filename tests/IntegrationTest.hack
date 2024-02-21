@@ -63,7 +63,6 @@ final class IntegrationTest extends HackTest {
 
   public async function testNotFound(): Awaitable<void> {
     $response = await fetch_async('https://httpbin.org/not-found');
-    $text = await $response->textAsync();
     expect($response->ok())->toBeFalse();
     expect($response->status())->toBeSame(404);
   }

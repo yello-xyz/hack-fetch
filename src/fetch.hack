@@ -17,21 +17,33 @@ type RequestOptions = shape(
 final class Client implements Response {
   private resource $curl_handle;
   private resource $multi_handle;
-  private bool $active = false;
+  private string $buffered_output = '';
+  private ?string $first_response = null;
   private int $status = -1;
   private bool $ok = false;
-  private string $buffered_output = '';
 
-  public function status(): int {
-    return $this->status;
+  public function __construct(string $url, RequestOptions $options) {
+    $this->curl_handle = \curl_init($url);
+    $this->initializeOptions($options);
+
+    $this->multi_handle = \curl_multi_init();
+    \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
   }
 
-  public function ok(): bool {
-    return $this->ok;
+  public async function consumeFirstResponseAsync(): Awaitable<void> {
+    foreach ($this->consumeResponses() await as $response) {
+      $this->first_response = $response;
+      break;
+    }
   }
 
-  public function body(): AsyncIterator<string> {
-    return $this->consume();
+  public async function body(): AsyncIterator<string> {
+    if ($this->first_response) {
+      yield $this->first_response;
+    }
+    foreach ($this->consumeResponses() await as $response) {
+      yield $response;
+    }
   }
 
   public async function textAsync(): Awaitable<string> {
@@ -47,16 +59,12 @@ final class Client implements Response {
     return \json_decode($text);
   }
 
-  public function __construct(string $url, RequestOptions $options) {
-    $this->curl_handle = \curl_init($url);
-    $this->initializeOptions($options);
-
-    $this->multi_handle = \curl_multi_init();
-    \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
+    public function status(): int {
+    return $this->status;
   }
 
-  public async function initializeAsync(): Awaitable<void> {
-    $this->execOnce();
+  public function ok(): bool {
+    return $this->ok;
   }
 
   public function __dispose(): void {
@@ -95,39 +103,37 @@ final class Client implements Response {
     \curl_setopt(
       $this->curl_handle,
       \CURLOPT_WRITEFUNCTION,
-      ($_ch, $chunk) ==> {
+      ($ch, $chunk) ==> {
         $this->buffered_output .= $chunk;
+        $this->status = \curl_getinfo($ch, \CURLINFO_RESPONSE_CODE);
+        $this->ok = $this->status >= 200 && $this->status < 300;
         return \strlen($chunk);
       },
     );
   }
 
-  private async function consume(): AsyncIterator<string> {
+  private async function consumeResponses(): AsyncIterator<string> {
     do {
-      if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
-        yield $this->buffered_output;
+      $active = 1;
+      do {
+        $status = \curl_multi_exec($this->multi_handle, inout $active);
+      } while ($status === \CURLM_CALL_MULTI_PERFORM);
+
+      $buffered_output = $this->buffered_output;
+      if (!\HH\Lib\Str\is_empty($buffered_output)) {
         $this->buffered_output = '';
+        yield $buffered_output;
       }
-      if (!$this->active) {
+
+      if (!$active) {
         break;
       }
+
       // HHAST_IGNORE_ERROR[DontAwaitInALoop]
       await \curl_multi_await($this->multi_handle);
-      $this->execOnce();
-    } while (true);
-
-    $this->status = \curl_getinfo($this->curl_handle, \CURLINFO_RESPONSE_CODE);
-    $this->ok = $this->status >= 200 && $this->status < 300;
+    } while ($status === \CURLM_OK);
 
     $this->close();
-  }
-
-  private function execOnce(): void {
-    $active = 1;
-    do {
-      $status = \curl_multi_exec($this->multi_handle, inout $active);
-    } while ($status === \CURLM_CALL_MULTI_PERFORM);
-    $this->active = $active && $status === \CURLM_OK;
   }
 }
 
@@ -137,6 +143,6 @@ async function fetch_async(
     shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
 ): Awaitable<Response> {
   $client = new Client($url, $options);
-  await $client->initializeAsync();
+  await $client->consumeFirstResponseAsync();
   return $client;
 }
