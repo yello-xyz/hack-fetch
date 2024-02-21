@@ -40,23 +40,19 @@ type RequestOptions = shape(
 final class Consumer {
   private resource $curl_handle;
   private resource $multi_handle;
-  private \HH\Lib\Ref<string> $result;
+  private string $buffered_output = '';
 
   public function __construct(string $url, RequestOptions $options) {
     $this->curl_handle = \curl_init($url);
-    $this->result = new \HH\Lib\Ref('');
-    Consumer::initializeOptions($this->curl_handle, $options, $this->result);
+    $this->initializeOptions($options);
+
     $this->multi_handle = \curl_multi_init();
     \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
   }
 
-  private static function initializeOptions(
-    resource $ch,
-    RequestOptions $options,
-    \HH\Lib\Ref<string> $result,
-  ): void {
+  private function initializeOptions(RequestOptions $options): void {
     if (Shapes::idx($options, 'method') === 'POST') {
-      \curl_setopt($ch, \CURLOPT_POST, 1);
+      \curl_setopt($this->curl_handle, \CURLOPT_POST, 1);
     }
 
     $headers = Shapes::idx($options, 'headers');
@@ -67,17 +63,18 @@ final class Consumer {
           ($key, $value) ==> $key.': '.$value,
         ),
       );
-      \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers_list);
+      \curl_setopt($this->curl_handle, \CURLOPT_HTTPHEADER, $headers_list);
     }
 
     $body = Shapes::idx($options, 'body');
     if ($body !== null) {
-      \curl_setopt($ch, \CURLOPT_POSTFIELDS, $body);
+      \curl_setopt($this->curl_handle, \CURLOPT_POSTFIELDS, $body);
     }
 
-    \curl_setopt($ch, \CURLOPT_RETURNTRANSFER, true);
-    \curl_setopt($ch, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
-      $result->set($result->get().$chunk);
+    \curl_setopt($this->curl_handle, \CURLOPT_RETURNTRANSFER, true);
+
+    \curl_setopt($this->curl_handle, \CURLOPT_WRITEFUNCTION, ($_ch, $chunk) ==> {
+      $this->buffered_output .= $chunk;
       return \strlen($chunk);
     });
   }
@@ -88,9 +85,9 @@ final class Consumer {
       do {
         $status = \curl_multi_exec($this->multi_handle, inout $active);
       } while ($status === \CURLM_CALL_MULTI_PERFORM);
-      if (!\HH\Lib\Str\is_empty($this->result->get())) {
-        yield $this->result->get();
-        $this->result->set('');
+      if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
+        yield $this->buffered_output;
+        $this->buffered_output = '';
       }
       if (!$active) {
         break;
