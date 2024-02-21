@@ -66,4 +66,13 @@ final class IntegrationTest extends HackTest {
     expect($response->ok())->toBeFalse();
     expect($response->status())->toBeSame(404);
   }
+
+  public async function testInvalidDomain(): Awaitable<void> {
+    try {
+      $response = await fetch_async('https://domain.invalid');
+      expect(true)->toBeFalse();
+    } catch (\Exception $e) {
+      expect($e->getMessage())->toBeSame('Could not resolve host: domain.invalid');
+    }
+  }
 }

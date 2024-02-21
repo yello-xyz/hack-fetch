@@ -59,7 +59,7 @@ final class Client implements Response {
     return \json_decode($text);
   }
 
-    public function status(): int {
+  public function status(): int {
     return $this->status;
   }
 
@@ -133,7 +133,14 @@ final class Client implements Response {
       await \curl_multi_await($this->multi_handle);
     } while ($status === \CURLM_OK);
 
+    $error = \curl_error($this->curl_handle);
+
     $this->close();
+
+    if ($error) {
+      $error_code = \curl_errno($this->curl_handle);
+      throw new \Exception($error, $error_code);
+    }
   }
 }
 
