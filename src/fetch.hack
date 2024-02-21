@@ -6,15 +6,20 @@ interface Response {
   public function jsonAsync(): Awaitable<mixed>;
 }
 
-final class AsyncResponse implements Response {
-  private AsyncIterator<string> $iterator;
+type RequestOptions = shape(
+  ?'method' => string,
+  ?'body' => ?string,
+  ?'headers' => dict<string, string>,
+);
 
-  public function __construct(AsyncIterator<string> $iterator) {
-    $this->iterator = $iterator;
-  }
+final class Client implements Response {
+  private resource $curl_handle;
+  private resource $multi_handle;
+  private bool $active = false;
+  private string $buffered_output = '';
 
   public function body(): AsyncIterator<string> {
-    return $this->iterator;
+    return $this->consume();
   }
 
   public async function textAsync(): Awaitable<string> {
@@ -29,19 +34,6 @@ final class AsyncResponse implements Response {
     $text = await $this->textAsync();
     return \json_decode($text);
   }
-}
-
-type RequestOptions = shape(
-  ?'method' => string,
-  ?'body' => ?string,
-  ?'headers' => dict<string, string>,
-);
-
-final class Consumer {
-  private resource $curl_handle;
-  private resource $multi_handle;
-  private bool $active = false;
-  private string $buffered_output = '';
 
   public function __construct(string $url, RequestOptions $options) {
     $this->curl_handle = \curl_init($url);
@@ -49,6 +41,10 @@ final class Consumer {
 
     $this->multi_handle = \curl_multi_init();
     \curl_multi_add_handle($this->multi_handle, $this->curl_handle);
+  }
+
+  public async function initializeAsync(): Awaitable<void> {
+    $this->execOnce();
   }
 
   public function __dispose(): void {
@@ -94,11 +90,7 @@ final class Consumer {
     );
   }
 
-  public async function initializeAsync(): Awaitable<void> {
-    $this->execOnce();
-  }
-
-  public async function consume(): AsyncIterator<string> {
+  private async function consume(): AsyncIterator<string> {
     do {
       if (!\HH\Lib\Str\is_empty($this->buffered_output)) {
         yield $this->buffered_output;
@@ -131,7 +123,7 @@ async function fetch_async(
   RequestOptions $options =
     shape('method' => 'GET', 'body' => null, 'headers' => dict[]),
 ): Awaitable<Response> {
-  $consumer = new Consumer($url, $options);
-  await $consumer->initializeAsync();
-  return new AsyncResponse($consumer->consume());
+  $client = new Client($url, $options);
+  await $client->initializeAsync();
+  return $client;
 }
