@@ -1,5 +1,9 @@
 # HackFetch
 Simple cURL wrapper for Hacklang. Basic HTTP client API inspired by [node-fetch](https://www.npmjs.com/package/node-fetch).
+## Installation
+```bash
+composer require yello/hack-fetch:dev-main
+```
 ## Common Usage
 ### Plain text or HTML
 ```Hack
@@ -53,7 +57,7 @@ use function Yello\HackFetch\fetch_async;
 
 $response = await fetch_async('https://github.com/');
 
-echo $response->ok() ? "OK" : "NOK";
+echo $response->ok() ? 'OK' : 'NOK';
 echo $response->status();
 echo $response->headers()['content-type'];
 ```
